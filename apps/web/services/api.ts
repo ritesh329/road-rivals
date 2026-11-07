@@ -150,7 +150,7 @@ export async function api<T>(
   const method = (init?.method ?? "GET").toUpperCase();
 
   // Only safe requests will automatically fallback
-  const isSafeMethod = ["GET", "HEAD", "OPTIONS"].includes(method);
+  const isSafeMethod = ["GET", "HEAD", "OPTIONS","POST","DELETE","PUT","PATCH"].includes(method);
 
   const normalizedPath = path.startsWith("/")
     ? path
