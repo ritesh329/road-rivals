@@ -34,10 +34,11 @@ export interface ActiveCar {
   damage: DamageHealth; paint: string; config: VehicleConfig; name: string;
 }
 
+// dpr ranges are in "device pixels per CSS pixel". Phones are 2-3x, so the old 1.5 cap upscaled the picture (blurry/torn edges).
 const Q = {
-  low: { dpr: [0.7, 1] as [number, number], shadows: false, shadow: 512, aa: false },
-  medium: { dpr: [1, 1.5] as [number, number], shadows: true, shadow: 1024, aa: true },
-  high: { dpr: [1, 2] as [number, number], shadows: true, shadow: 2048, aa: true },
+  low: { dpr: [0.75, 1] as [number, number], shadows: false, shadow: 512, aa: false },
+  medium: { dpr: [1, 2] as [number, number], shadows: true, shadow: 1024, aa: true },
+  high: { dpr: [1.5, 3] as [number, number], shadows: true, shadow: 2048, aa: true },
 };
 
 export function hasWebGL() {
@@ -92,11 +93,11 @@ export default function GameCanvas({ car, roomCode = null }: { car: ActiveCar; r
     <DeviceGate>
       <div className="absolute inset-0 touch-none select-none overflow-hidden bg-black">
         <Canvas
-          key={quality} shadows={q.shadows} dpr={[q.dpr[0], Math.min(q.dpr[1], q.dpr[1] * dprCap)]}
+          key={quality} shadows={q.shadows} dpr={[q.dpr[0], Math.max(q.dpr[0], q.dpr[1] * dprCap)]}
           gl={{ antialias: q.aa, powerPreference: "high-performance" }} camera={{ fov: 62, near: 0.3, far: 2200, position: [-45, 4, 0] }}
           style={{ position: "absolute", inset: 0 }}
         >
-          <PerformanceMonitor onDecline={() => setDprCap((d) => Math.max(0.6, d - 0.2))} flipflops={3} />
+          <PerformanceMonitor onDecline={() => setDprCap((d) => Math.max(0.7, d - 0.1))} flipflops={3} />
           <Suspense fallback={null}>
             <Physics paused gravity={[0, -9.81, 0]}>
               <Lighting shadows={q.shadows} shadowSize={q.shadow} />

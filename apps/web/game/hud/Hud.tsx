@@ -57,7 +57,7 @@ export default function Hud() {
       {hud.drifting && <div className="absolute left-1/2 top-40 -translate-x-1/2 text-2xl font-black italic text-amber-300 drop-shadow short:top-[94px] short:text-xl">DRIFT!</div>}
 
       {/* speedo */}
-      <div className="absolute bottom-24 right-4 w-56 rounded-xl bg-black/50 p-3 backdrop-blur sm:bottom-6 touch:tall:bottom-24 short:bottom-1 short:left-1/2 short:right-auto short:w-44 short:-translate-x-1/2 short:p-2">
+      <div className="absolute bottom-24 right-4 w-56 rounded-xl bg-black/50 p-3 backdrop-blur sm:bottom-6 touch:tall:bottom-24 short:bottom-[136px] short:right-2 short:w-36 short:p-2">
         <div className="flex items-end justify-between">
           <div><span className="text-5xl font-black tabular-nums short:text-3xl">{Math.round(hud.speedKmh)}</span><span className="ml-1 text-xs text-slate-300">km/h</span></div>
           <div className={`text-4xl font-black short:text-2xl ${hud.shifting ? "text-slate-500" : "text-rival"}`}>{gear}</div>

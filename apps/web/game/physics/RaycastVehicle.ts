@@ -74,9 +74,13 @@ export class RaycastVehicle {
     const out = stepDrivetrain(this.state, p, this.fx, input, speed, dt);
 
     // ---- steering (smoothed input, speed-sensitive limit)
-    const rate = input.steer === 0 ? 7 : 4.5;
+    const rate = input.steer === 0 ? 8 : 7;
     this.steerInput += (input.steer - this.steerInput) * Math.min(1, rate * dt);
-    const target = -this.steerInput * steerLimit(p, this.fx, Math.abs(speed)) + this.fx.steerBiasRad;
+    // Playability: keep enough lock at speed to take a 90° city corner, and never let the damage "pull"
+    // (worn suspension) overpower the driver (it used to cancel left turns and double right ones at speed).
+    const lim = Math.max(steerLimit(p, this.fx, Math.abs(speed)), p.steering.maxAngleRad * 0.2);
+    const pull = Math.max(-lim * 0.25, Math.min(lim * 0.25, this.fx.steerBiasRad));
+    const target = -this.steerInput * lim + pull;
     this.steerAngle += (target - this.steerAngle) * Math.min(1, 14 * dt);
     c.setWheelSteering(0, this.steerAngle);
     c.setWheelSteering(1, this.steerAngle);

@@ -55,7 +55,8 @@ export function readControls() {
   const k = controls.key, t = controls.touch;
   controls.throttle = k.up || t.up ? 1 : 0;
   controls.brake = k.down || t.down ? 1 : 0;
-  controls.steer = (k.right || t.right ? 1 : 0) - (k.left || t.left ? 1 : 0);
+  // keyboard / arrow buttons are digital, the touch steering pad is analog; they add up (clamped)
+  controls.steer = Math.max(-1, Math.min(1, (k.right || t.right ? 1 : 0) - (k.left || t.left ? 1 : 0) + t.steer));
   controls.handbrake = controls.keyHand || t.handbrake;
   controls.nitro = controls.keyNitro || t.nitro;
   return controls;

@@ -238,12 +238,13 @@ function updateCamera(cam: THREE.PerspectiveCamera, s: any, mode: string, dt: nu
   if (mode === "chase") {
     const f = s.tmpV.set(0, 0, 1).applyQuaternion(s.quat); f.y = 0; f.normalize();
     s.fw.lerp(f, k(4)).normalize();
-    const dist = 7.4 + speed * 0.035;
-    const want = new THREE.Vector3().copy(s.pos).addScaledVector(s.fw, -dist); want.y = s.pos.y + 2.7 + speed * 0.01;
+    const compact = typeof window !== "undefined" && window.innerHeight <= 520; // landscape phone: thumbs cover the bottom
+    const dist = 7.4 + speed * 0.035 + (compact ? 1.3 : 0);
+    const want = new THREE.Vector3().copy(s.pos).addScaledVector(s.fw, -dist); want.y = s.pos.y + (compact ? 3.1 : 2.7) + speed * 0.01;
     if (!s.camInit) { s.camPos.copy(want); s.camInit = true; }
     s.camPos.lerp(want, k(9));
     cam.position.copy(s.camPos);
-    cam.lookAt(s.pos.x + s.fw.x * 4, s.pos.y + 1.0, s.pos.z + s.fw.z * 4);
+    cam.lookAt(s.pos.x + s.fw.x * 4, s.pos.y + (compact ? 0.1 : 1.0), s.pos.z + s.fw.z * 4);
   } else {
     s.camInit = false;
     const off = mode === "hood" ? s.tmpV.set(0, 0.95, 1.4) : s.tmpV.set(0.0, 0.82, 0.15);
