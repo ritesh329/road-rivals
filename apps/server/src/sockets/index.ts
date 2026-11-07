@@ -4,6 +4,7 @@ import { COOKIE_NAME, verifyToken } from "../middleware/auth";
 import { prisma } from "../utils/db";
 import { HttpError } from "../utils/errors";
 import { memberRoom, serializeRoom } from "../services/rooms";
+import { registerVoice } from "../services/voice";
 import {
   addPresence, broadcastRoom, cancelGrace, chatHistory, dropFromGame, isOnline, joinGame, onGameRespawn, onGameState,
   removePresence, sendChat, setIo, startGrace, startRaceFor, abortRaceFor,
@@ -20,6 +21,7 @@ const codeOf = (p: unknown) => (typeof (p as { code?: unknown })?.code === "stri
  *   game:join       enter the shared world of a RACING room (server assigns seat, sends everyone's look)
  *   game:state      your car pose, ≤ 20 Hz (validated + plausibility-checked; broadcast as game:states)
  *   chat:send       room chat (cleaned, rate limited)
+ *   voice:*         voice chat signalling (see services/voice.ts)
  */
 export function registerSockets(io: Server) {
   setIo(io);
@@ -38,6 +40,7 @@ export function registerSockets(io: Server) {
     addPresence(userId, socket.id); cancelGrace(userId);
     socket.join(`user:${userId}`);
     socket.emit("hello", { userId });
+    registerVoice(io, socket); // registered first so its game:leave / disconnect hooks still see gameRoomId
     const touchRooms = async () => {
       const mine = await prisma.roomMembership.findMany({ where: { userId, leftAt: null, kicked: false } });
       for (const m of mine) await broadcastRoom(m.roomId);

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { emitAck } from "@/services/socket";
 import { SEAT_COLORS, remote, useNet } from "./netStore";
+import { useVoice } from "./voiceStore";
 
 /** Multiplayer overlay: player list with live speed, connection state, chat (press T). */
 export default function NetHud() {
@@ -29,6 +30,17 @@ export default function NetHud() {
     if (t && roomCode) { try { await emitAck("chat:send", { code: roomCode, text: t }); } catch { /* ignore */ } }
   }
   const list = Object.values(players).sort((a, b) => a.seat - b.seat);
+  const voice = useVoice();
+  const talking = (id: string) => voice.on && voice.speaking[id];
+
+  // leave voice when the game screen closes; V = push-to-talk while muted
+  useEffect(() => () => useVoice.getState().leave(), []);
+  useEffect(() => {
+    const k = (v: boolean) => (e: KeyboardEvent) => { if (e.code === "KeyV" && !e.repeat && (e.target as HTMLElement)?.tagName !== "INPUT") useVoice.getState().talk(v); };
+    const d = k(true), u = k(false);
+    window.addEventListener("keydown", d); window.addEventListener("keyup", u);
+    return () => { window.removeEventListener("keydown", d); window.removeEventListener("keyup", u); };
+  }, []);
 
   return (
     <>
@@ -37,13 +49,23 @@ export default function NetHud() {
           <span>PLAYERS {list.length + 1}/5</span>
           <span className={connected ? "text-emerald-400" : "animate-pulse text-red-400"}>{connected ? "● LIVE" : <>● <span className="short:hidden">RECONNECTING</span></>}</span>
         </div>
-        <div className="flex items-center justify-between py-0.5 font-bold" style={{ color: SEAT_COLORS[seat % 5] }}><span>You</span><span className="text-slate-300">{selfId ? "" : ""}</span></div>
+        <div className="flex items-center justify-between py-0.5 font-bold" style={{ color: SEAT_COLORS[seat % 5] }}><span>You</span><span className="text-slate-300">{voice.on ? (voice.muted && !talking("me") ? "🔇" : talking("me") ? "🔊" : "🎤") : ""}</span></div>
         {list.map((p) => (
           <div key={p.id} className="flex items-center justify-between py-0.5" style={{ color: SEAT_COLORS[p.seat % 5] }} data-testid="player-row">
-            <span className="truncate">{p.username}</span>
+            <span className="truncate">{talking(p.id) ? "🔊 " : voice.linked.includes(p.id) ? "🎧 " : ""}{p.username}</span>
             <span className="tabular-nums text-slate-300">{Math.round(remote.pos.get(p.id)?.speed ?? 0)} km/h</span>
           </div>
         ))}
+        <div className="pointer-events-auto mt-1 flex gap-1">
+          {!voice.on
+            ? <button onClick={() => void voice.join()} disabled={voice.busy} data-testid="voice-join" className="flex-1 rounded-md bg-emerald-500/25 py-1.5 text-emerald-200 short:py-1">{voice.busy ? "…" : "🎤 Join voice"}</button>
+            : <>
+                <button onClick={voice.toggleMute} data-testid="voice-mute" className={`flex-1 rounded-md py-1.5 short:py-1 ${voice.muted ? "bg-red-500/30 text-red-200" : "bg-emerald-500/25 text-emerald-200"}`}>{voice.muted ? "🔇 Muted" : "🎤 Mic on"}</button>
+                <button onClick={voice.leave} data-testid="voice-leave" className="rounded-md bg-white/10 px-2 py-1.5 text-slate-200 short:py-1" aria-label="Leave voice">✕</button>
+              </>}
+        </div>
+        {voice.error && <p className="mt-1 text-[10px] leading-tight text-red-300">{voice.error}</p>}
+        {voice.on && voice.muted && <p className="mt-1 hidden text-[10px] text-slate-400 tall:block touch:hidden">Hold V to talk</p>}
         <Link href={roomCode ? `/room/${roomCode}` : "/rooms"} className="pointer-events-auto mt-1 block rounded-md bg-white/10 py-1.5 text-center text-slate-200 hover:bg-white/20 short:py-1">Room lobby</Link>
       </div>
       <div className="pointer-events-none absolute bottom-44 left-3 w-72 max-w-[60vw] touch:tall:bottom-28 short:bottom-[88px] short:left-2 short:w-52" data-testid="chat">
