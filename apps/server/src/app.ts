@@ -18,6 +18,22 @@ import { profileRouter } from "./routes/profile";
 
 export function createApp() {
   const app = express();
+
+
+  app.use((req, res, next) => {
+    console.log(
+      `[REQUEST] ${new Date().toISOString()} ${req.method} ${req.originalUrl}`
+    );
+
+    res.on("finish", () => {
+      console.log(
+        `[RESPONSE] ${req.method} ${req.originalUrl} ${res.statusCode}`
+      );
+    });
+
+    next();
+  });
+
   app.use(helmet());
   app.use(cors({ origin: config.clientOrigin, credentials: true }));
   // sendBeacon (damage flush on page close) posts text/plain – accept it as JSON as well
