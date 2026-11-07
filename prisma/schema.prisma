@@ -1,0 +1,469 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum VehicleCategory {
+  HATCHBACK
+  SEDAN
+  MUSCLE
+  SPORTS
+  RACING_GT
+  SUPERCAR
+  HYPERCAR
+  OFFROAD
+}
+enum PartType {
+  ENGINE
+  TURBO
+  TYRES
+  BRAKES
+  SUSPENSION
+  GEARBOX
+  SPOILER
+  ARMOR
+  NITRO
+  COOLING
+  DIFFERENTIAL
+  AERO
+}
+enum DamageComponent {
+  ENGINE
+  FRONT_BUMPER
+  REAR_BUMPER
+  DOORS
+  WHEELS
+  TYRES
+  SUSPENSION
+  BRAKES
+  RADIATOR
+  TRANSMISSION
+}
+enum RoomVisibility {
+  PUBLIC
+  PRIVATE
+}
+enum RoomStatus {
+  LOBBY
+  STARTING
+  RACING
+  FINISHED
+  CLOSED
+}
+enum RaceMode {
+  MULTIPLAYER
+  QUICK
+  PRIVATE
+  TIME_TRIAL
+  DRIFT
+  CHECKPOINT
+  TOURNAMENT
+  SURVIVAL
+}
+enum RaceStatus {
+  PENDING
+  COUNTDOWN
+  RUNNING
+  FINISHED
+  ABORTED
+}
+enum Tier {
+  BRONZE
+  SILVER
+  GOLD
+  PLATINUM
+  DIAMOND
+  LEGEND
+}
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  BLOCKED
+}
+enum TransactionType {
+  RACE_REWARD
+  MISSION_REWARD
+  ACHIEVEMENT_REWARD
+  PURCHASE_VEHICLE
+  PURCHASE_PART
+  REPAIR
+  CUSTOMIZATION
+  SIGNUP_BONUS
+  ADJUSTMENT
+}
+enum MissionPeriod {
+  DAILY
+  WEEKLY
+  ONE_TIME
+}
+enum GarageKind {
+  REPAIR
+  ENGINE_SHOP
+  WORKSHOP
+  FUEL
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  username     String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  profile        PlayerProfile?
+  wallet         PlayerWallet?
+  vehicles       VehicleOwnership[]
+  inventory      PlayerInventory[]
+  hostedRooms    GameRoom[]          @relation("RoomHost")
+  memberships    RoomMembership[]
+  friendsSent    Friendship[]        @relation("FriendRequester")
+  friendsRecv    Friendship[]        @relation("FriendAddressee")
+  missions       PlayerMission[]
+  achievements   PlayerAchievement[]
+  participations RaceParticipant[]
+  leaderboard    Leaderboard[]
+  transactions   Transaction[]
+  notifications  Notification[]
+}
+
+model PlayerProfile {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  avatar            String   @default("default")
+  level             Int      @default(1)
+  xp                Int      @default(0)
+  tier              Tier     @default(BRONZE)
+  activeOwnershipId String?
+  racesPlayed       Int      @default(0)
+  racesWon          Int      @default(0)
+  distanceKm        Float    @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model PlayerWallet {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  coins     Int      @default(0)
+  version   Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  @@map("player_wallets")
+}
+
+// Catalogue definition (separate from player-owned vehicles)
+model Vehicle {
+  id            String          @id @default(cuid())
+  slug          String          @unique
+  name          String
+  category      VehicleCategory
+  requiredLevel Int             @default(1)
+  price         Int             @default(0)
+  baseStats     Json
+  modelPath     String?
+  owners        VehicleOwnership[]
+  createdAt     DateTime        @default(now())
+
+  @@index([category, requiredLevel])
+}
+
+model VehicleOwnership {
+  id          String   @id @default(cuid())
+  userId      String
+  vehicleId   String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vehicle     Vehicle  @relation(fields: [vehicleId], references: [id])
+  purchasedAt DateTime @default(now())
+
+  configuration VehicleConfiguration?
+  upgrades      VehicleUpgrade[]
+  damage        VehicleDamage[]
+  participants  RaceParticipant[]
+
+  @@unique([userId, vehicleId])
+  @@index([userId])
+}
+
+model VehicleConfiguration {
+  id          String           @id @default(cuid())
+  ownershipId String           @unique
+  ownership   VehicleOwnership @relation(fields: [ownershipId], references: [id], onDelete: Cascade)
+  paint       String           @default("#e11d48")
+  wheels      String           @default("stock")
+  rims        String           @default("stock")
+  spoiler     String           @default("none")
+  bodyKit     String           @default("none")
+  bumpers     String           @default("stock")
+  decal       String           @default("none")
+  neon        String?
+  exhaust     String           @default("stock")
+  updatedAt   DateTime         @updatedAt
+}
+
+model VehiclePart {
+  id                String   @id @default(cuid())
+  slug              String   @unique
+  type              PartType
+  tier              Int      @default(1)
+  name              String
+  price             Int
+  requiredLevel     Int      @default(1)
+  physicsModifiers  Json
+  compatibleCategories VehicleCategory[]
+  upgrades          VehicleUpgrade[]
+  inventory         PlayerInventory[]
+
+  @@index([type, tier])
+}
+
+model VehicleUpgrade {
+  id          String           @id @default(cuid())
+  ownershipId String
+  partId      String
+  slot        PartType
+  ownership   VehicleOwnership @relation(fields: [ownershipId], references: [id], onDelete: Cascade)
+  part        VehiclePart      @relation(fields: [partId], references: [id])
+  installedAt DateTime         @default(now())
+
+  @@unique([ownershipId, slot])
+}
+
+model VehicleDamage {
+  id          String           @id @default(cuid())
+  ownershipId String
+  component   DamageComponent
+  health      Float            @default(100)
+  ownership   VehicleOwnership @relation(fields: [ownershipId], references: [id], onDelete: Cascade)
+  updatedAt   DateTime         @updatedAt
+
+  @@unique([ownershipId, component])
+}
+
+model Garage {
+  id       String     @id @default(cuid())
+  slug     String     @unique
+  name     String
+  kind     GarageKind
+  mapId    String     @default("city")
+  x        Float
+  y        Float
+  z        Float
+  services GarageService[]
+}
+
+model GarageService {
+  id        String @id @default(cuid())
+  garageId  String
+  garage    Garage @relation(fields: [garageId], references: [id], onDelete: Cascade)
+  code      String
+  name      String
+  basePrice Int
+
+  @@unique([garageId, code])
+}
+
+model PlayerInventory {
+  id       String      @id @default(cuid())
+  userId   String
+  partId   String
+  quantity Int         @default(1)
+  user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  part     VehiclePart @relation(fields: [partId], references: [id])
+
+  @@unique([userId, partId])
+}
+
+model GameRoom {
+  id          String         @id @default(cuid())
+  code        String         @unique
+  inviteToken String         @unique
+  hostId      String
+  host        User           @relation("RoomHost", fields: [hostId], references: [id])
+  visibility  RoomVisibility @default(PRIVATE)
+  status      RoomStatus     @default(LOBBY)
+  locked      Boolean        @default(false)
+  maxPlayers  Int            @default(5)
+  mode        RaceMode       @default(MULTIPLAYER)
+  mapId       String         @default("city")
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  members RoomMembership[]
+  races   Race[]
+
+  @@index([status, visibility])
+}
+
+model RoomMembership {
+  id       String    @id @default(cuid())
+  roomId   String
+  userId   String
+  room     GameRoom  @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ready    Boolean   @default(false)
+  joinedAt DateTime  @default(now())
+  leftAt   DateTime?
+  kicked   Boolean   @default(false)
+
+  @@unique([roomId, userId])
+}
+
+model Friendship {
+  id          String           @id @default(cuid())
+  requesterId String
+  addresseeId String
+  requester   User             @relation("FriendRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  addressee   User             @relation("FriendAddressee", fields: [addresseeId], references: [id], onDelete: Cascade)
+  status      FriendshipStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+
+  @@unique([requesterId, addresseeId])
+}
+
+model Mission {
+  id          String        @id @default(cuid())
+  code        String        @unique
+  title       String
+  description String
+  period      MissionPeriod
+  target      Int
+  rewardCoins Int
+  rewardXp    Int
+  players     PlayerMission[]
+}
+
+model PlayerMission {
+  id          String    @id @default(cuid())
+  userId      String
+  missionId   String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mission     Mission   @relation(fields: [missionId], references: [id])
+  progress    Int       @default(0)
+  completedAt DateTime?
+  claimedAt   DateTime?
+  periodKey   String
+
+  @@unique([userId, missionId, periodKey])
+}
+
+model Achievement {
+  id          String @id @default(cuid())
+  code        String @unique
+  title       String
+  description String
+  category    String
+  rewardCoins Int    @default(0)
+  rewardXp    Int    @default(0)
+  players     PlayerAchievement[]
+}
+
+model PlayerAchievement {
+  id            String      @id @default(cuid())
+  userId        String
+  achievementId String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement   Achievement @relation(fields: [achievementId], references: [id])
+  unlockedAt    DateTime    @default(now())
+
+  @@unique([userId, achievementId])
+}
+
+model Season {
+  id        String   @id @default(cuid())
+  name      String
+  startsAt  DateTime
+  endsAt    DateTime
+  active    Boolean  @default(false)
+  races     Race[]
+  entries   Leaderboard[]
+}
+
+model Race {
+  id         String     @id @default(cuid())
+  roomId     String?
+  room       GameRoom?  @relation(fields: [roomId], references: [id])
+  seasonId   String?
+  season     Season?    @relation(fields: [seasonId], references: [id])
+  mode       RaceMode
+  status     RaceStatus @default(PENDING)
+  mapId      String
+  laps       Int        @default(1)
+  startedAt  DateTime?
+  finishedAt DateTime?
+  createdAt  DateTime   @default(now())
+
+  participants RaceParticipant[]
+
+  @@index([roomId])
+}
+
+model RaceParticipant {
+  id          String           @id @default(cuid())
+  raceId      String
+  userId      String
+  ownershipId String
+  race        Race             @relation(fields: [raceId], references: [id], onDelete: Cascade)
+  user        User             @relation(fields: [userId], references: [id])
+  ownership   VehicleOwnership @relation(fields: [ownershipId], references: [id])
+  result      RaceResult?
+
+  @@unique([raceId, userId])
+}
+
+model RaceResult {
+  id            String          @id @default(cuid())
+  participantId String          @unique
+  participant   RaceParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  position      Int
+  timeMs        Int?
+  coinsAwarded  Int             @default(0)
+  xpAwarded     Int             @default(0)
+  validated     Boolean         @default(false)
+  createdAt     DateTime        @default(now())
+}
+
+model Leaderboard {
+  id       String @id @default(cuid())
+  seasonId String
+  userId   String
+  season   Season @relation(fields: [seasonId], references: [id])
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  score    Int    @default(0)
+  wins     Int    @default(0)
+
+  @@unique([seasonId, userId])
+  @@index([seasonId, score])
+}
+
+model Transaction {
+  id             String          @id @default(cuid())
+  userId         String
+  user           User            @relation(fields: [userId], references: [id])
+  type           TransactionType
+  amount         Int
+  balanceAfter   Int
+  idempotencyKey String          @unique
+  meta           Json?
+  createdAt      DateTime        @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  body      String
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, readAt])
+}

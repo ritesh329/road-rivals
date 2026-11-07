@@ -1,0 +1,46 @@
+@import url("https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Inter:wght@400;500;600&display=swap");
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --sat: env(safe-area-inset-top, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+}
+
+html, body { height: 100%; background: #07080d; overscroll-behavior: none; -webkit-text-size-adjust: 100%; -webkit-tap-highlight-color: transparent; }
+body { @apply bg-[#07080d] text-slate-100 antialiased; font-family: Inter, system-ui, sans-serif; min-height: 100dvh; }
+/* pages sit inside the notch / gesture areas instead of under them */
+body { padding-left: var(--sal); padding-right: var(--sar); padding-bottom: var(--sab); padding-top: var(--sat); }
+/* the game page paints edge to edge and positions its own HUD inside the safe area */
+body.game-active { padding: 0; overflow: hidden; position: fixed; inset: 0; width: 100%; }
+
+/* every "min-h-screen" page grows with the *dynamic* viewport (mobile URL bar) */
+.min-h-screen { min-height: 100vh; min-height: 100dvh; }
+.h-screen { height: 100vh; height: 100dvh; }
+
+.font-display { font-family: Orbitron, ui-sans-serif, system-ui; }
+.card { @apply rounded-2xl border border-white/10 bg-white/[0.03] p-5 backdrop-blur; }
+.btn { @apply inline-flex items-center justify-center rounded-xl px-5 py-3 font-semibold transition disabled:opacity-50; min-height: 44px; }
+.btn-primary { @apply bg-rival text-white shadow-[0_0_24px_rgba(244,63,94,.45)] hover:brightness-110; }
+.btn-ghost { @apply border border-white/15 hover:border-neon hover:text-neon; }
+/* 16px+ keeps iOS from zooming into inputs */
+.input { @apply w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 outline-none focus:border-neon; font-size: 16px; }
+
+@media (max-height: 520px) {
+  .card { @apply p-3 rounded-xl; }
+  .btn { @apply px-3 py-2 text-sm; min-height: 36px; }
+}
+
+/* HUD helpers: stay clear of notch / rounded corners / gesture bar */
+.hud-top { top: max(0.5rem, var(--sat)); }
+.hud-bottom { bottom: max(0.5rem, var(--sab)); }
+.hud-left { left: max(0.5rem, var(--sal)); }
+.hud-right { right: max(0.5rem, var(--sar)); }
+
+/* positioned box that is exactly the safe area; HUD pieces are absolutely placed inside it */
+.safe-inset { position: absolute; top: var(--sat); right: var(--sar); bottom: var(--sab); left: var(--sal); pointer-events: none; }
+/* full-bleed overlays keep their content out of the notch */
+.safe-pad { padding-top: max(0.75rem, var(--sat)); padding-right: max(0.75rem, var(--sar)); padding-bottom: max(0.75rem, var(--sab)); padding-left: max(0.75rem, var(--sal)); }

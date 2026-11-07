@@ -1,0 +1,15 @@
+{
+  "name": "Road Rivals",
+  "short_name": "Road Rivals",
+  "description": "Browser-based 3D multiplayer racing",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
+  "orientation": "landscape",
+  "background_color": "#07080d",
+  "theme_color": "#07080d",
+  "icons": [
+    { "src": "/icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
